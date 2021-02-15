@@ -1,12 +1,6 @@
 # The main functions for calculating the
 # Average Treatment effect and related quantities.
 #
-##### LOAD LIBRARIES #######
-#
-source("helper_functions.R")
-source("integral_functions.R")
-source("datagen_functions.R")
-#
 
 # Estimates psi_1 = EY_1 
 #
@@ -35,23 +29,25 @@ est_psi1 <- function(Y, X, L_err,
   myf3 <- function(z) {
     MU(z,1)/TAU(z)
   }
-  term1 <- sapply(dat$L_err, FUN = function(z_t){
+  term1 <- sapply(L_err, FUN = function(z_t){
     calE_transform(z_t = z_t, lim_t = lambda,
                    lim_z = lambda, char_noise = NULL, 
                    sd_e = 1, myf1)
   })
-  term2 <- sapply(dat$L_err, FUN = function(z_t){
+  term2 <- sapply(L_err, FUN = function(z_t){
     calE_transform(z_t = z_t, lim_t = lambda,
                    lim_z = lambda, char_noise = NULL, 
                    sd_e = 1, myf2)
   })
-  term3 <- sapply(dat$L_err, FUN = function(z_t){
+  term3 <- sapply(L_err, FUN = function(z_t){
     calE_transform(z_t = z_t, lim_t = lambda,
                    lim_z = lambda, char_noise = NULL, 
                    sd_e = 1, myf3)
   })
   
-  mean(term1 * dat$Y * dat$X) + mean(term2) - mean(term3 * dat$X)
+  mean(term1 * Y * X) + 
+    mean(term2) - 
+    mean(term3 * X)
   
 }
 
@@ -76,25 +72,25 @@ est_psi0 <- function(Y, X, L_err,
   myf3 <- function(z) {
     MU(z,0)/(1 - TAU(z))
   }
-  term1 <- sapply(dat$L_err, FUN = function(z_t){
+  term1 <- sapply(L_err, FUN = function(z_t){
     calE_transform(z_t = z_t, lim_t = lambda,
                    lim_z = lambda, char_noise = NULL, 
                    sd_e = 1, myf1)
   })
-  term2 <- sapply(dat$L_err, FUN = function(z_t){
+  term2 <- sapply(L_err, FUN = function(z_t){
     calE_transform(z_t = z_t, lim_t = lambda,
                    lim_z = lambda, char_noise = NULL, 
                    sd_e = 1, myf2)
   })
-  term3 <- sapply(dat$L_err, FUN = function(z_t){
+  term3 <- sapply(L_err, FUN = function(z_t){
     calE_transform(z_t = z_t, lim_t = lambda,
                    lim_z = lambda, char_noise = NULL, 
                    sd_e = 1, myf3)
   })
   
-  mean(term1 * dat$Y * (1-dat$X)) + 
+  mean(term1 * Y * (1-X)) + 
     mean(term2) - 
-    mean(term3 * (1-dat$X))
+    mean(term3 * (1-X))
   
 }
 
@@ -105,3 +101,17 @@ est_ate <- function(Y, X, L_err,
     est_psi0(Y,X,L_err, MU,TAU, lambda = lambda)
 }
 
+# Estimate psi0, psi1 when there is no measurement error
+# using the doubly robust estimator. 
+est_ate_noError <- function(Y, X, L, 
+                            MU, TAU) {
+  psi1 <- mean(X * Y * 1/TAU(L)) +
+    mean(MU(L,1)) - 
+    mean(X * MU(L,1)/TAU(L))
+  
+  psi0 <- mean((1-X) * Y * 1/(1-TAU(L)) ) +
+    mean(MU(L,0)) - 
+    mean((1-X) * MU(L,0)/(1-TAU(L)))
+  ate <- psi1- psi0
+  return(c("psi0" = psi0, "psi1" = psi1, "ate" = ate))
+}
